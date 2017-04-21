@@ -5,9 +5,10 @@ import matplotlib.image as mpimg
 import glob
 
 
+
 # Add all of the methods required 
 # First, fix the distortion
-
+image5 = mpimg.imread('test5.jpg')
 #	Fn for collecting matrix of objp's and image points and calibrating
 def get_img_pts_calib(test_image_set):
 	objoints = []
@@ -26,21 +27,12 @@ def get_img_pts_calib(test_image_set):
 	ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (img.shape[:2]), None, None)
 	return nx, ny, mtx, dist 
 
-#	Now that we have the matrices (imgpoints and objpoints) & have calibrated, we can transform images
+#	Now that we have the matrices (imgpoints and objpoints) & have calibrated, we can undistort the images
 def undistort(img, mtx, dist):
 	#ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (img.shape[:2]), None, None)
 	undistorted_image = cv2.undistort(img, mtx, dist, None, mtx)
 	return undistorted_image
 
-#	The image inputted should 
-# 		NB! to keep reviewing the src and dest points!!!
-def transform(img):
-	(h, w) = (img.shape[0], img.shape[1])
-	src = np.float32([[w // 2 - 76, h * .625], [w // 2 + 76, h * .625], [-100, h], [w + 100, h]])
-	dest = np.float32([[100, 0], [w - 100, 0], [100, h], [w - 100, h]])
-	M = cv2.getPerspectiveTransform(src, dest)
-	trnsformed = cv2.warpPerspective(img, M, (w, h))
-	return transformed, M
 
 # Now define the methods for the 3 gradient threshold techniques
 def abs_sobel_thresh(img, orient='x', s_kernel = 3, thresh=(0,255)):
@@ -49,7 +41,7 @@ def abs_sobel_thresh(img, orient='x', s_kernel = 3, thresh=(0,255)):
         abs_sobel = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize = s_kernel))
     if orient == 'y':
         abs_sobel = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize = s_kernel))
-    scaled_sobel = np.uint8(255*abs_soble/np.max(abs_sobel))
+    scaled_sobel = np.uint8(255*abs_sobel/np.max(abs_sobel))
     sbinary = np.zeros_like(scaled_sobel)
     sbinary[(scaled_sobel > thresh[0]) & (scaled_sobel <= thresh[1])] = 1
     return sbinary 
@@ -58,7 +50,7 @@ def mag_thresh(img, s_kernel= 3, thresh=(0, 255)):
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize = s_kernel)
     sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize = s_kernel)
-    gradmag = np.sqrt(np.square(sobelx) + np.sqare(sobely))
+    gradmag = np.sqrt(np.square(sobelx) + np.square(sobely))
     scale_factor = np.max(gradmag)/255
     gradmag = (gradmag/scale_factor).astype(np.uint8)
     binary_output = np.zeros_like(gradmag)
@@ -66,7 +58,7 @@ def mag_thresh(img, s_kernel= 3, thresh=(0, 255)):
     return binary_output 
 
 def dir_thresh(img, s_kernel=3, thresh=(0, np.pi/2)):
-    gray = cv2.cvtColor(gray, cv2.COLOR_RGB2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
     abs_sobelx = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize = s_kernel))
     abs_sobely = np.absolute(cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize = s_kernel))
     grad_dir = np.arctan2(abs_sobelx, abs_sobely)
@@ -77,10 +69,10 @@ def dir_thresh(img, s_kernel=3, thresh=(0, np.pi/2)):
 # Now define a method for combining the three methods: 
 def combine_grad_thresh(img):
 	#Run above methods with selected parameters for thresh & ksize
-	gradx = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(20, 100))
-	grady = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(5, 100))
-	mag_binary = mag_thresh(image, sobel_kernel=ksize, mag_thresh=(30, 100))
-	dir_binary = dir_threshold(image, sobel_kernel=ksize, thresh=(0.7, 1.3))
+	gradx = abs_sobel_thresh(img, orient='x', s_kernel=3, thresh=(20, 100))
+	grady = abs_sobel_thresh(img, orient='y', s_kernel=3, thresh=(5, 100))
+	mag_binary = mag_thresh(img, s_kernel=5, thresh=(30, 100))
+	dir_binary = dir_thresh(img, s_kernel=11, thresh=(0.7, 1.3))
 	#make a combination of them...
 	combined_sobel = np.zeros_like(dir_binary)
 	combined_sobel[(gradx == 1) & (grady == 1) | ((mag_binary == 1) & ( dir_binary ==1)) ] = 1
@@ -94,12 +86,14 @@ def hls_saturation(img, thresh=(90, 220)):
 	binary_s[(s >= thresh[0]) & (s <= thresh[1])] = 1
 	return binary_s
 
+
 # Now, COMBINE color and grad!!!!
 def combined(img):
 	grd = combine_grad_thresh(img)
 	sat = hls_saturation(img)
 	comb_bin = np.zeros_like(grd)
 	comb_bin[(grd == 1) & (sat == 1)] = 1
+	return comb_bin
 
 
 
@@ -110,15 +104,23 @@ def plotting(img):
 	ax1.imshow(img)
 	ax1.set_title('Original Image', fontsize=50)
 	#NB for now this is just sobel combined, should be col AND sobel combined! FIXED
-	combined = combined(img)
-	ax2.imshow(combined, cmap='gray')
+	combination = combined(img)
+	ax2.imshow(combination, cmap='gray')
 	ax2.set_title('Thresholded Grad. Dir. Combined with Saturation(hls)s_', fontsize=50)
 	plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
 
 
-# 
+plotting(image5)
 
 
-
+#	The image inputted should now be transformed to a top down view
+# 		NB! to keep reviewing the src and dest points!!!
+def transform(img):
+	(h, w) = (img.shape[0], img.shape[1])
+	src = np.float32([[w // 2 - 76, h * .625], [w // 2 + 76, h * .625], [-100, h], [w + 100, h]])
+	dest = np.float32([[100, 0], [w - 100, 0], [100, h], [w - 100, h]])
+	M = cv2.getPerspectiveTransform(src, dest)
+	trnsformed = cv2.warpPerspective(img, M, (w, h))
+	return transformed, M
 
 
