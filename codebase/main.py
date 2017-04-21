@@ -27,10 +27,21 @@ def get_img_pts_calib(test_image_set):
 	return nx, ny, mtx, dist 
 
 #	Now that we have the matrices (imgpoints and objpoints) & have calibrated, we can transform images
-def undistort_transform(img, imgpoints, objpoints):
-	ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (img.shape[:2]), None, None)
+def undistort(img, mtx, dist):
+	#ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, (img.shape[:2]), None, None)
 	undistorted_image = cv2.undistort(img, mtx, dist, None, mtx)
 	return undistorted_image
+
+#The image inputted should 
+def transform(img):
+	(h, w) = (img.shape[0], img.shape[1])
+	src = np.float32([[w // 2 - 76, h * .625], [w // 2 + 76, h * .625], [-100, h], [w + 100, h]])
+	dest = np.float32([[100, 0], [w - 100, 0], [100, h], [w - 100, h]])
+	M = cv2.getPerspectiveTransform(src, dest)
+	trnsformed = cv2.warpPerspective(img, M, (w, h))
+	return transformed, M
+
+
 
 
 
