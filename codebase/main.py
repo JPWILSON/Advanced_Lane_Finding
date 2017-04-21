@@ -5,7 +5,6 @@ import matplotlib.image as mpimg
 import glob
 
 
-
 # Add all of the methods required 
 # First, fix the distortion
 image5 = mpimg.imread('test5.jpg')
