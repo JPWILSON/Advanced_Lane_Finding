@@ -1,6 +1,7 @@
 # Advanced Lane Finding
 
-* [Video Link](https://youtu.be/rv3Fgl3G4f0 "Video Link of Lane Finding")
+* [Video Link](https://youtu.be/rv3Fgl3G4f0 "Video Link of Lane Finding") to project demo.
+
 This repo contains an implementation of a computer vision based methodology for the location 
 of road lane lines, from an onboard camera. 
 
